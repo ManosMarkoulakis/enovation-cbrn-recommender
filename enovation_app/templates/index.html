@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CBRN Recommender</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 0; padding: 16px; background: #f5f5f5; color: #111827; }
+    .app-container { max-width: 1200px; margin: 0 auto; background: #ffffff; border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 16px 20px 20px; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    .subtitle { margin: 0 0 12px; font-size: 13px; color: #4b5563; }
+    .layout { display: grid; grid-template-columns: 0.35fr 0.65fr; gap: 16px; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+    .panel { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px 12px; background: #ffffff; }
+    .panel-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    .field-group { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+    .field-label { font-size: 13px; margin-bottom: 2px; }
+    select { width: 100%; padding: 6px 8px; border-radius: 4px; border: 1px solid #d1d5db;
+      font-size: 13px; background: white; }
+    select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 1px #2563eb; }
+    .btn-primary { margin-top: 10px; padding: 6px 14px; border-radius: 4px; border: none;
+      background: #2563eb; color: white; font-size: 13px; cursor: pointer; }
+    .small-text { font-size: 12px; color: #6b7280; margin-top: 4px; }
+    .previous-list, .feedback-list { list-style: none; margin: 4px 0 0; padding: 0; max-height: 140px;
+      overflow-y: auto; font-size: 12px; }
+    .previous-item { padding: 4px 6px; border-radius: 4px; border: 1px solid #e5e7eb; margin-bottom: 4px;
+      cursor: pointer; background: #f9fafb; }
+    .previous-item:hover { background: #eff6ff; border-color: #bfdbfe; }
+    .previous-title { font-weight: 600; font-size: 12px; }
+    .previous-meta { font-size: 11px; color: #6b7280; }
+    .feedback-item { border-bottom: 1px solid #e5e7eb; padding: 3px 0; }
+    .feedback-item:last-child { border-bottom: none; }
+    .feedback-line { font-size: 12px; }
+    .feedback-meta { font-size: 11px; color: #6b7280; }
+    .results-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+    .results-title { font-size: 14px; font-weight: 600; }
+    .results-summary { font-size: 12px; color: #6b7280; }
+    .results-container { display: flex; flex-direction: column; gap: 8px; max-height: 540px; overflow-y: auto; padding-right: 2px; }
+    .empty-state { padding: 8px 10px; border-radius: 4px; border: 1px dashed #d1d5db; font-size: 13px; color: #6b7280; background: #f9fafb; }
+    .center-card { border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 9px 9px; background: #ffffff; font-size: 13px; }
+    .center-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
+    .center-name { font-weight: 600; margin-bottom: 2px; }
+    .center-meta { font-size: 12px; color: #6b7280; }
+    .score-pill { min-width: 80px; border-radius: 4px; border: 1px solid #bfdbfe; background: #eff6ff;
+      padding: 4px 6px; text-align: right; font-size: 11px; }
+    .score-pill .value { font-size: 14px; font-weight: 600; display: block; }
+    .cluster-row { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 4px; }
+    .cluster-chip { border-radius: 999px; border: 1px solid #d1d5db; padding: 2px 8px; font-size: 11px;
+      color: #374151; background: #f9fafb; }
+    .metrics-row { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 4px; }
+    .metric-chip { border-radius: 999px; border: 1px solid #e5e7eb; padding: 2px 6px; font-size: 11px;
+      color: #4b5563; background: #f9fafb; }
+    .metric-strong { border-color: #bfdbfe; background: #eff6ff; }
+    .explain-block { border-radius: 4px; border: 1px solid #e5e7eb; padding: 6px 7px; background: #f9fafb; margin-top: 4px; }
+    .explain-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+    .explain-list { list-style: none; margin: 2px 0 0; padding: 0; font-size: 12px; }
+    .explain-item { margin-bottom: 2px; }
+    .explain-criterion { font-weight: 600; display: inline; margin-right: 4px; }
+    .explain-text { display: inline; }
+    .explain-toggle { border: none; background: none; color: #2563eb; cursor: pointer; font-size: 12px; padding-left: 4px; }
+
+    details.just-details { margin-top: 2px; font-size: 11px; }
+    .graph-path { border-radius: 3px; border: 1px solid #e5e7eb; padding: 2px 4px; margin-top: 2px; background: #ffffff; }
+    .path-step { display: inline-block; padding: 2px 6px; background: #e0e7ff; border-radius: 4px; color: #3730a3; font-weight: 500; }
+    .path-arrow { color: #9ca3af; padding: 0 4px; }
+    .rating-row { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-top: 4px; font-size: 11px; }
+    .rating-label { color: #4b5563; }
+    .rating-buttons { display: inline-flex; gap: 4px; }
+    .rating-btn { border-radius: 999px; padding: 2px 8px; font-size: 11px; border: 1px solid #d1d5db; background: #ffffff; cursor: pointer; }
+    .rating-btn.active { border-color: #2563eb; background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+    .rating-btn.bad.active { border-color: #dc2626; background: #fee2e2; color: #b91c1c; }
+    .rating-btn.good.active { border-color: #16a34a; background: #dcfce7; color: #15803d; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <h1>CBRN Recommender</h1>
+    <p class="subtitle">
+      Select a technology and a scenario to see which training centres are most relevant.
+    </p>
+
+    <div class="layout">
+      <div>
+        <div class="panel">
+          <div class="panel-title">Inputs</div>
+          <div class="field-group">
+            <div>
+              <label class="field-label" for="techSelect">Technology</label>
+              <select id="techSelect">
+                <option value="">-- select --</option>
+            <option value="Chemical Products">Chemical Products</option>
+            <option value="Foam disinfectants">Foam disinfectants</option>
+            <option value="Functional assays (e.g. cell-based assays, enzymatic activity tests)">Functional assays (e.g. cell-based assays, enzymatic activity tests)</option>
+            <option value="Gaseous disinfectants/vapours (e.g., hydrogen peroxide vapour (HPV), ozone, chlorine dioxide)">Gaseous disinfectants/vapours (e.g., hydrogen peroxide vapour (HPV), ozone, chlorine dioxide)</option>
+            <option value="High throughput Sequencing On-site (e.g. Oxford Nanopore Technology MinION)">High throughput Sequencing On-site (e.g. Oxford Nanopore Technology MinION)</option>
+            <option value="Isothermal amplification (e.g. LAMP)">Isothermal amplification (e.g. LAMP)</option>
+            <option value="Limited decontamination capability (only for safely undressing police personnel).">Limited decontamination capability (only for safely undressing police personnel).</option>
+            <option value="Liquid disinfectants (e.g. sodium hypochlorite (bleach), peracetic acid)">Liquid disinfectants (e.g. sodium hypochlorite (bleach), peracetic acid)</option>
+            <option value="Mass spectrometry (MS)">Mass spectrometry (MS)</option>
+            <option value="Nucleic Acid-based Assays (e.g., PCR for genes encoding toxin components),">Nucleic Acid-based Assays (e.g., PCR for genes encoding toxin components),</option>
+            <option value="Physical Methods">Physical Methods</option>
+            <option value="Rapid Diagnostic Tests (RDT) based on pathogen-specific antibodies - Immunoassays">Rapid Diagnostic Tests (RDT) based on pathogen-specific antibodies - Immunoassays</option>
+            <option value="Real-time PCR (qPCR)">Real-time PCR (qPCR)</option>
+            <option value="Solid disinfectants (granular or tablet form, e.g., calcium hypochlorite)">Solid disinfectants (granular or tablet form, e.g., calcium hypochlorite)</option>
+            <option value="Surface plasmon resonance (SPR)">Surface plasmon resonance (SPR)</option>
+            <option value="Technologies used by Campus Vesta">Technologies used by Campus Vesta</option>
+            <option value="Various technology to detect, identify and monitor CBRN threats">Various technology to detect, identify and monitor CBRN threats</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label" for="scenSelect">Scenario</label>
+              <select id="scenSelect">
+                <option value="">-- select --</option>
+            <option value="CBRN scenario">CBRN scenario</option>
+            <option value="Response to outbreak scenario">Response to outbreak scenario</option>
+            <option value="Scenario capabilities of CAMPUS VESTA">Scenario capabilities of CAMPUS VESTA</option>
+            <option value="Training of local staffs and/or quality control of local capacities">Training of local staffs and/or quality control of local capacities</option>
+            <option value="Validation and use of new technologies on-site">Validation and use of new technologies on-site</option>
+            <option value="Various CBRN scenarios by WMP">Various CBRN scenarios by WMP</option>
+              </select>
+            </div>
+          </div>
+          <button id="runBtn" type="button" class="btn-primary">Run recommendation</button>
+        </div>
+
+        <div class="panel" style="margin-top:8px;">
+          <div class="panel-title">Previous searches</div>
+          <ul id="previousList" class="previous-list">
+            <li class="small-text">No previous runs yet.</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="panel">
+        <div class="results-header">
+          <div class="results-title">Recommendations</div>
+          <div id="resultsSummary" class="results-summary">
+            Choose inputs and click "Run recommendation".
+          </div>
+        </div>
+        <div id="resultsContainer" class="results-container">
+          <div class="empty-state">
+            No results yet. This panel will display a ranked list of centres with scores (0–10), cluster summaries,
+            explanations, and justification paths.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const techSelect = document.getElementById("techSelect");
+    const scenSelect = document.getElementById("scenSelect");
+    const runBtn = document.getElementById("runBtn");
+    const resultsSummary = document.getElementById("resultsSummary");
+    const resultsContainer = document.getElementById("resultsContainer");
+    const previousList = document.getElementById("previousList");
+    const feedbackList = document.getElementById("feedbackList");
+
+    let previousSearches = [];
+    let feedbackEntries = [];
+    let currentSearch = null;
+
+    function renderPreviousSearches() {
+      previousList.innerHTML = "";
+      if (!previousSearches.length) {
+        const li = document.createElement("li");
+        li.className = "small-text";
+        li.textContent = "No previous runs yet.";
+        previousList.appendChild(li);
+        return;
+      }
+      previousSearches.forEach((s, idx) => {
+        const li = document.createElement("li");
+        li.className = "previous-item";
+        const title = document.createElement("div");
+        title.className = "previous-title";
+        title.textContent = `${idx + 1}. ${s.technology} × ${s.scenario}`;
+        const meta = document.createElement("div");
+        meta.className = "previous-meta";
+        meta.textContent = `${s.results.length} centres • ${s.ts}`;
+        li.appendChild(title);
+        li.appendChild(meta);
+        li.addEventListener("click", () => {
+          currentSearch = s;
+          techSelect.value = s.technology;
+          scenSelect.value = s.scenario;
+          renderResults(s);
+        });
+        previousList.appendChild(li);
+      });
+    }
+
+    function renderFeedbackLog() {
+      if (!feedbackList) return;
+      feedbackList.innerHTML = "";
+      if (!feedbackEntries.length) {
+        const li = document.createElement("li");
+        li.className = "small-text";
+        li.textContent = "No feedback yet.";
+        feedbackList.appendChild(li);
+        return;
+      }
+      feedbackEntries.slice(0, 20).forEach((f) => {
+        const li = document.createElement("li");
+        li.className = "feedback-item";
+        const line = document.createElement("div");
+        line.className = "feedback-line";
+        line.innerHTML = `<strong>${f.rating}</strong> – ${f.center_label}`;
+        const meta = document.createElement("div");
+        meta.className = "feedback-meta";
+        meta.textContent = `${f.tech} × ${f.scen} • ${f.ts}`;
+        li.appendChild(line);
+        li.appendChild(meta);
+        feedbackList.appendChild(li);
+      });
+    }
+
+    function formatScore10(val) {
+      if (typeof val !== "number" || isNaN(val)) return "0.0";
+      return val.toFixed(1);
+    }
+
+    
+    const SCORE_TOOLTIPS = {
+      "Operational fit":
+        "Overall match between the centre’s focus and the selected technology and scenario (relative to the best matches found).",
+      "Training capacity":
+        "How much training activity (courses, programmes, exercises) the centre offers for this technology and scenario.",
+      "Infrastructure & networks":
+        "How strong the centre’s infrastructure and cooperation networks are for this type of training.",
+      "Tech use":
+        "How many of the selected technologies are actively used by this centre.",
+      "Tech training":
+        "How much training the centre provides on the selected technologies.",
+      "Threat capability":
+        "How many relevant CBRN threat types (Biological, Chemical, Radiological/Nuclear) this centre can cover.",
+      "Incident coverage":
+        "How many relevant incident types or scenarios this centre has experience or training in.",
+      "Facilities":
+        "How many specialised facilities (labs, simulators, training grounds, etc.) relevant to your selection the centre has.",
+      "Disciplines":
+        "How many relevant professional disciplines (e.g. medical, fire services, police, civil protection) the centre covers.",
+      "Courses":
+        "How many specific courses related to the selected technology and scenario the centre offers.",
+      "Networks":
+        "How many cooperation networks or projects this centre is involved in.",
+    };
+
+    const EXPLANATION_CONFIG = {
+      "Technology Use": {
+        title: "Tech use",
+        prefix: "This centre uses the following technologies relevant to your selection: ",
+        moreLabel: "technologies",
+      },
+      "Technology Training": {
+        title: "Tech training",
+        prefix: "This centre provides training that uses the following technologies: ",
+        moreLabel: "technologies",
+      },
+      "Threat Capability": {
+        title: "Threat capability",
+        prefix: "This centre has capabilities related to the following CBRN threats: ",
+        moreLabel: "threats",
+      },
+      "Incident Coverage": {
+        title: "Incident coverage",
+        prefix: "This centre covers the following incident types: ",
+        moreLabel: "incidents",
+      },
+      "Facility Match": {
+        title: "Facilities",
+        prefix: "This centre provides relevant facilities such as: ",
+        moreLabel: "facilities",
+      },
+      "Discipline Match": {
+        title: "Disciplines",
+        prefix: "This centre covers the following disciplines: ",
+        moreLabel: "disciplines",
+      },
+      "Training Capability": {
+        title: "Courses",
+        prefix: "This centre offers the following relevant courses: ",
+        moreLabel: "courses",
+      },
+      "Network Links": {
+        title: "Networks",
+        prefix: "This centre is connected with the following networks: ",
+        moreLabel: "networks",
+      },
+    };
+
+    const EXPLANATION_ORDER = [
+      "Technology Use",
+      "Technology Training",
+      "Threat Capability",
+      "Incident Coverage",
+      "Facility Match",
+      "Discipline Match",
+      "Training Capability",
+      "Network Links",
+    ];
+
+    function buildExplanationList(exps, exList) {
+      const groups = {};
+      exps.forEach((e) => {
+        const crit = e.criterion || "Other";
+        const entity = e.entity || "";
+        if (!entity) return;
+        if (!groups[crit]) groups[crit] = [];
+        if (!groups[crit].includes(entity)) {
+          groups[crit].push(entity);
+        }
+      });
+
+      const seen = new Set();
+      const orderedCriteria = [];
+      EXPLANATION_ORDER.forEach((c) => {
+        if (groups[c]) {
+          orderedCriteria.push(c);
+          seen.add(c);
+        }
+      });
+      Object.keys(groups).forEach((c) => {
+        if (!seen.has(c)) orderedCriteria.push(c);
+      });
+
+      orderedCriteria.forEach((crit) => {
+        const entities = groups[crit];
+        if (!entities || !entities.length) return;
+        const cfg = EXPLANATION_CONFIG[crit] || {
+          title: crit,
+          prefix: "",
+          moreLabel: "items",
+        };
+
+        const li = document.createElement("li");
+        li.className = "explain-item";
+
+        const labelEl = document.createElement("div");
+        labelEl.className = "explain-criterion";
+        labelEl.textContent = cfg.title + ":";
+
+        const textEl = document.createElement("div");
+        textEl.className = "explain-text";
+
+        const maxShown = 4;
+        const allLabels = entities.slice();
+        const shown = allLabels.slice(0, maxShown);
+        const remaining = allLabels.length - shown.length;
+
+        const spanText = document.createElement("span");
+        const basePrefix = cfg.prefix || "";
+        spanText.textContent = basePrefix + shown.join(", ");
+        textEl.appendChild(spanText);
+
+        if (remaining > 0) {
+          const moreBtn = document.createElement("button");
+          moreBtn.type = "button";
+          moreBtn.className = "explain-toggle";
+          moreBtn.setAttribute("data-expanded", "0");
+          moreBtn.textContent = ` and ${remaining} more ${cfg.moreLabel}`;
+          moreBtn.addEventListener("click", () => {
+            const expanded = moreBtn.getAttribute("data-expanded") === "1";
+            if (!expanded) {
+              spanText.textContent = basePrefix + allLabels.join(", ");
+              moreBtn.textContent = " show less";
+              moreBtn.setAttribute("data-expanded", "1");
+            } else {
+              spanText.textContent = basePrefix + shown.join(", ");
+              moreBtn.textContent = ` and ${remaining} more ${cfg.moreLabel}`;
+              moreBtn.setAttribute("data-expanded", "0");
+            }
+          });
+          textEl.appendChild(moreBtn);
+        }
+
+        li.appendChild(labelEl);
+        li.appendChild(textEl);
+        exList.appendChild(li);
+      });
+    }
+
+    function loadOptions() {
+      fetch("/api/options")
+        .then(res => res.json())
+        .then(data => {
+          const techs = data.technologies || [];
+          const scens = data.scenarios || [];
+          techSelect.innerHTML = '<option value="">-- select --</option>';
+          scenSelect.innerHTML = '<option value="">-- select --</option>';
+          techs.forEach(label => {
+            const opt = document.createElement("option");
+            opt.value = label;
+            opt.textContent = label;
+            techSelect.appendChild(opt);
+          });
+          scens.forEach(label => {
+            const opt = document.createElement("option");
+            opt.value = label;
+            opt.textContent = label;
+            scenSelect.appendChild(opt);
+          });
+        })
+        .catch(err => {
+          console.error("Error loading options", err);
+        });
+    }
+
+    loadOptions();
+
+function renderResults(search) {
+      const tech = search.technology;
+      const scen = search.scenario;
+      const results = search.results || [];
+      const ratings = search.ratings || (search.ratings = {});
+
+      resultsContainer.innerHTML = "";
+
+      if (!results.length) {
+        resultsSummary.innerHTML = `No training centres found for <strong>${tech}</strong> and scenario <strong>${scen}</strong>.`;
+        const div = document.createElement("div");
+        div.className = "empty-state";
+        div.textContent = "No matches returned from the recommender. Try a different combination.";
+        resultsContainer.appendChild(div);
+        return;
+      }
+
+      resultsSummary.innerHTML = `Showing <strong>${results.length}</strong> centres for <strong>${tech}</strong> × <strong>${scen}</strong>.`;
+
+      results.forEach((center, idx) => {
+        const s = center.scores || {};
+
+        const card = document.createElement("article");
+        card.className = "center-card";
+
+        const header = document.createElement("div");
+        header.className = "center-header";
+
+        const left = document.createElement("div");
+        const nameEl = document.createElement("div");
+        nameEl.className = "center-name";
+        nameEl.textContent = `${idx + 1}. ${center.center_label || "Unnamed centre"}`;
+        const metaEl = document.createElement("div");
+        metaEl.className = "center-meta";
+        const metaParts = [];
+        if (center.region) {
+          metaParts.push(`Region: ${center.region}`);
+        }
+        metaParts.push(`Technology: ${tech}`);
+        metaParts.push(`Scenario: ${scen}`);
+        metaEl.textContent = metaParts.join(" • ");
+        left.appendChild(nameEl);
+        left.appendChild(metaEl);
+
+        const scorePill = document.createElement("div");
+        scorePill.className = "score-pill";
+        const final10 = typeof s.final_score_0_10 === "number"
+          ? formatScore10(s.final_score_0_10)
+          : (typeof s.total_score === "number" ? formatScore10(s.total_score) : "0.0");
+        const core = typeof s.core_score === "number" ? (s.core_score * 10).toFixed(1) : "0.0";
+        scorePill.innerHTML = `<span class="value">${final10} / 10</span>`;
+
+        header.appendChild(left);
+        header.appendChild(scorePill);
+
+        const clusterRow = document.createElement("div");
+        clusterRow.className = "cluster-row";
+        const clusters = [
+          ["Operational fit", s.operational_fit],
+          ["Training capacity", s.training_capacity],
+          ["Infrastructure & networks", s.infrastructure_coop],
+        ];
+        clusters.forEach(([label, val]) => {
+          const chip = document.createElement("span");
+          chip.className = "cluster-chip";
+          chip.title = SCORE_TOOLTIPS[label] || "";
+          const v10 = typeof val === "number" ? (val * 10).toFixed(1) : "0.0";
+          chip.textContent = `${label}: ${v10} / 10`;
+          clusterRow.appendChild(chip);
+        });
+
+        const metricsRow = document.createElement("div");
+        metricsRow.className = "metrics-row";
+        const metricData = [
+          ["Tech use", s.tech_use_count],
+          ["Tech training", s.tech_train_count],
+          ["Threat capability", s.threat_cap_count],
+          ["Incident coverage", s.incident_count],
+          ["Facilities", s.facility_count],
+          ["Disciplines", s.discipline_count],
+          ["Courses", s.course_count],
+          ["Networks", s.network_count],
+        ];
+        metricData.forEach(([label, val]) => {
+          const chip = document.createElement("span");
+          chip.className = "metric-chip" + (val && val > 0 ? " metric-strong" : "");
+          chip.title = SCORE_TOOLTIPS[label] || "";
+          chip.textContent = `${label}: ${val || 0}`;
+          metricsRow.appendChild(chip);
+        });
+
+        const explainBlock = document.createElement("div");
+        explainBlock.className = "explain-block";
+        const exTitle = document.createElement("div");
+        exTitle.className = "explain-title";
+        exTitle.textContent = "Why this centre?";
+        const exList = document.createElement("ul");
+        exList.className = "explain-list";
+        const exps = center.explanations_simple || [];
+        if (!exps.length) {
+          const li = document.createElement("li");
+          li.className = "explain-item";
+          li.textContent = "No detailed explanations returned.";
+          exList.appendChild(li);
+        } else {
+          buildExplanationList(exps, exList);
+        }
+        explainBlock.appendChild(exTitle);
+        explainBlock.appendChild(exList);
+
+        const justDetails = document.createElement("details");
+        justDetails.className = "just-details";
+        const sum = document.createElement("summary");
+        sum.textContent = "Show justification graph paths";
+        justDetails.appendChild(sum);
+        const paths = center.graph_paths || [];
+        if (!paths.length) {
+          const p = document.createElement("div");
+          p.className = "graph-path";
+          p.textContent = "No justification paths available.";
+          justDetails.appendChild(p);
+        } else {
+          paths.forEach((pText) => {
+            const p = document.createElement("div");
+            p.className = "graph-path";
+            const segments = String(pText).split("→").map(s => s.trim()).filter(Boolean);
+            if (!segments.length) {
+              p.textContent = pText;
+            } else {
+              segments.forEach((seg, idx) => {
+                const step = document.createElement("span");
+                step.className = "path-step";
+                step.textContent = seg;
+                p.appendChild(step);
+                if (idx < segments.length - 1) {
+                  const arrow = document.createElement("span");
+                  arrow.className = "path-arrow";
+                  arrow.textContent = "➜";
+                  p.appendChild(arrow);
+                }
+              });
+            }
+            justDetails.appendChild(p);
+          });
+        }
+
+        const ratingRow = document.createElement("div");
+        ratingRow.className = "rating-row";
+        const ratingLabel = document.createElement("div");
+        ratingLabel.className = "rating-label";
+        ratingLabel.textContent = "How do you rate this recommendation?";
+
+        const ratingBtns = document.createElement("div");
+        ratingBtns.className = "rating-buttons";
+
+        const btnBad = document.createElement("button");
+        btnBad.type = "button";
+        btnBad.className = "rating-btn bad";
+        btnBad.textContent = "Bad";
+
+        const btnNeutral = document.createElement("button");
+        btnNeutral.type = "button";
+        btnNeutral.className = "rating-btn neutral";
+        btnNeutral.textContent = "Neutral";
+
+        const btnGood = document.createElement("button");
+        btnGood.type = "button";
+        btnGood.className = "rating-btn good";
+        btnGood.textContent = "Good";
+
+        function syncRatingButtons() {
+          const r = ratings[center.center_label];
+          [btnBad, btnNeutral, btnGood].forEach(b => b.classList.remove("active"));
+          if (r === "Bad") btnBad.classList.add("active");
+          else if (r === "Neutral") btnNeutral.classList.add("active");
+          else if (r === "Good") btnGood.classList.add("active");
+        }
+
+        function logFeedback(ratingLabel) {
+          ratings[center.center_label] = ratingLabel;
+          const ts = new Date().toLocaleTimeString();
+          const entry = {
+            center_label: center.center_label,
+            rating: ratingLabel,
+            tech,
+            scen,
+            ts,
+          };
+          feedbackEntries.unshift(entry);
+          renderFeedbackLog();
+          const payload = {
+            tech,
+            scen,
+            center_label: center.center_label,
+            rating: ratingLabel,
+            scores: s,
+          };
+          fetch("/api/feedback", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(payload)
+          }).catch(err => console.error("Feedback POST error", err));
+        }
+
+        btnBad.addEventListener("click", () => { logFeedback("Bad"); syncRatingButtons(); });
+        btnNeutral.addEventListener("click", () => { logFeedback("Neutral"); syncRatingButtons(); });
+        btnGood.addEventListener("click", () => { logFeedback("Good"); syncRatingButtons(); });
+
+        syncRatingButtons();
+
+        ratingBtns.appendChild(btnBad);
+        ratingBtns.appendChild(btnNeutral);
+        ratingBtns.appendChild(btnGood);
+        ratingRow.appendChild(ratingLabel);
+        ratingRow.appendChild(ratingBtns);
+
+        card.appendChild(header);
+        card.appendChild(clusterRow);
+        card.appendChild(metricsRow);
+        card.appendChild(explainBlock);
+        card.appendChild(justDetails);
+        card.appendChild(ratingRow);
+
+        resultsContainer.appendChild(card);
+      });
+    }
+
+    runBtn.addEventListener("click", () => {
+      const tech = techSelect.value;
+      const scen = scenSelect.value;
+      if (!tech || !scen) {
+        alert("Please select both a Technology and a Scenario.");
+        return;
+      }
+      resultsSummary.textContent = "Running recommendation…";
+      resultsContainer.innerHTML = "";
+      fetch(`/api/recommend?tech=${encodeURIComponent(tech)}&scen=${encodeURIComponent(scen)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            resultsSummary.innerHTML = `<span style="color:#b91c1c;">Error:</span> ${data.error}`;
+            const div = document.createElement("div");
+            div.className = "empty-state";
+            div.textContent = "The backend returned an error. Check the Flask console.";
+            resultsContainer.appendChild(div);
+            return;
+          }
+          const results = data.results || [];
+          const search = {
+            technology: tech,
+            scenario: scen,
+            results,
+            ratings: {},
+            ts: new Date().toLocaleTimeString(),
+          };
+          previousSearches.unshift(search);
+          currentSearch = search;
+          renderPreviousSearches();
+          renderResults(search);
+        })
+        .catch(err => {
+          console.error("Fetch error", err);
+          resultsSummary.innerHTML = `<span style="color:#b91c1c;">Error contacting backend.</span>`;
+          const div = document.createElement("div");
+          div.className = "empty-state";
+          div.textContent = "Could not reach the backend. Make sure Flask is running.";
+          resultsContainer.appendChild(div);
+        });
+    });
+  </script>
+</body>
+</html>
