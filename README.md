@@ -35,10 +35,6 @@ pip install -r requirements.txt
 2. Εκτέλεση εφαρμογής
 python app.py
 
-## **Η εφαρμογή ανοίγει στο:**
-
-http://127.0.0.1:5000
-
 ## **Αναλυτική επεξήγηση της αρχιτεκτονικής, της λογικής SPARQL και του scoring υπάρχει στο:**
 
 docs/ENOVATION_Explanation_Report.pdf
