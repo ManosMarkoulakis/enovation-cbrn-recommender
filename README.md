@@ -32,10 +32,10 @@ docs/ENOVATION_Explanation_Report.pdf → Αναφορά επεξήγησης
 
 Σε Python περιβάλλον:
 
-pip install -r requirements.txt
+**pip install -r requirements.txt**
 
-2. Εκτέλεση εφαρμογής
-python app.py
+2. Εκτέλεση εφαρμογής: 
+**python App/app.py**
 
 ## **Αναλυτική επεξήγηση της αρχιτεκτονικής, της λογικής SPARQL και του scoring υπάρχει στο:**
 
