@@ -16,6 +16,8 @@
 
 -Mechanisms Explainability (κείμενο + justification graph)
 
+-embeddings (TransE + cosine similarity)
+
 ## **Περιεχόμενα Repository:**
 
 app.py                      → Backend API (Flask)
